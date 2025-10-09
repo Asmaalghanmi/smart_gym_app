@@ -13,6 +13,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   percent_indicator: ^4.2.5
   rounded_bottom_bar_flutter: ^0.0.1
+  supabase_flutter: ^2.10.3
+  flutter_dotenv: ^6.0.0
 
 dev_dependencies:
   flutter_test:

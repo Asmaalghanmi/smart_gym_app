@@ -1,9 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'screens/home.dart';
 import 'screens/classes.dart';
 import 'screens/account.dart';
 
-void main() => runApp(const GoGymApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // ✅ اربطي المشروع بقاعدة Supabase (استبدلي القيم لو مشروع ثاني)
+  await Supabase.initialize(
+    url: 'https://ypwulvcsaeyagluczvwr.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlwd3VsdmNzYWV5YWdsdWN6dndyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk5MTU1NDAsImV4cCI6MjA3NTQ5MTU0MH0.X5co-yU3dZ2j2v6neriRF9ewvfsphRZKr3abscJlupU',
+  );
+
+  runApp(const GoGymApp());
+}
+
+// 🌟 تقدروا تستخدمون هذا العميل بأي شاشة: supa.from('table')...
+final supa = Supabase.instance.client;
 
 class GoGymApp extends StatelessWidget {
   const GoGymApp({super.key});
