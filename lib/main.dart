@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mys_app/screens/login.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'screens/home.dart';
@@ -11,7 +12,8 @@ Future<void> main() async {
   // ✅ اربطي المشروع بقاعدة Supabase (استبدلي القيم لو مشروع ثاني)
   await Supabase.initialize(
     url: 'https://ypwulvcsaeyagluczvwr.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlwd3VsdmNzYWV5YWdsdWN6dndyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk5MTU1NDAsImV4cCI6MjA3NTQ5MTU0MH0.X5co-yU3dZ2j2v6neriRF9ewvfsphRZKr3abscJlupU',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlwd3VsdmNzYWV5YWdsdWN6dndyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk5MTU1NDAsImV4cCI6MjA3NTQ5MTU0MH0.X5co-yU3dZ2j2v6neriRF9ewvfsphRZKr3abscJlupU',
   );
 
   runApp(const GoGymApp());
@@ -41,7 +43,7 @@ class GoGymApp extends StatelessWidget {
           unselectedItemColor: Colors.white70,
         ),
       ),
-      home: const RootShell(),
+      home: const LoginPage(),
     );
   }
 }
@@ -64,9 +66,12 @@ class _RootShellState extends State<RootShell> {
         currentIndex: _index,
         onTap: (i) => setState(() => _index = i),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_month_rounded), label: 'Classes'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'Account'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.home_rounded), label: 'Home'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.calendar_month_rounded), label: 'Classes'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_rounded), label: 'Account'),
         ],
       ),
     );
