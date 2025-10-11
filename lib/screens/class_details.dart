@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:mys_app/main.dart';
 
-class ClassDetailsScreen extends StatelessWidget {
+class ClassDetailsScreen extends StatefulWidget {
+  final int sessionId;
   final String title;
   final String time;
   final String duration;
@@ -9,10 +12,11 @@ class ClassDetailsScreen extends StatelessWidget {
   final String instructorExp;
   final String imagePath;
   final String instructorImagePath;
-  final bool isFull; // إن كانت الحصة ممتلئة
+  final bool isFull;
 
   const ClassDetailsScreen({
     super.key,
+    required this.sessionId,
     required this.title,
     required this.time,
     required this.duration,
@@ -21,72 +25,184 @@ class ClassDetailsScreen extends StatelessWidget {
     required this.instructorExp,
     required this.imagePath,
     required this.instructorImagePath,
-    this.isFull = false,
+    required this.isFull,
   });
+
+  @override
+  State<ClassDetailsScreen> createState() => _ClassDetailsScreenState();
+}
+
+class _ClassDetailsScreenState extends State<ClassDetailsScreen> {
+  final supabase = Supabase.instance.client;
+  bool isLoading = false;
+
+  Future<void> _bookClass(BuildContext context) async {
+    setState(() => isLoading = true);
+
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('You must be logged in to book a class.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        setState(() => isLoading = false);
+        return;
+      }
+
+      // ✅ تحقق أولاً هل المستخدم حجز نفس الكلاس من قبل
+      final existing = await supabase
+          .from('bookings')
+          .select()
+          .eq('user_id', user.id)
+          .eq('session_id', widget.sessionId);
+
+      if (existing.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('You have already booked this class before.'),
+            backgroundColor: Colors.amber,
+          ),
+        );
+        setState(() => isLoading = false);
+        return;
+      }
+
+      // ✅ إدخال الحجز الجديد
+      await supabase.from('bookings').insert({
+        'user_id': user.id,
+        'session_id': widget.sessionId,
+        'booked_at': DateTime.now().toIso8601String(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Class booked successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } on PostgrestException catch (e) {
+      debugPrint('❌ Postgres error: ${e.message}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.message}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } catch (e) {
+      debugPrint('⚠️ Error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: SizedBox(
-            height: 48,
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isFull ? Colors.white12 : const Color(0xFFF48FB1),
-                foregroundColor: isFull ? Colors.white54 : Colors.black,
-                shape: const StadiumBorder(),
-              ),
-              onPressed: isFull ? null : () {
-                // TODO: نفّذ منطق الحجز هنا
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Booked successfully')),
-                );
-              },
-              child: Text(isFull ? 'Full' : 'Book'),
-            ),
-          ),
-        ),
+      backgroundColor: const Color(0xFF121212),
+      appBar: AppBar(
+        title: Text(widget.title),
+        backgroundColor: Colors.black,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: imagePath.startsWith('assets/') || imagePath.startsWith('lib/assets/')
-                ? Image.asset(imagePath, height: 200, width: double.infinity, fit: BoxFit.cover)
-                : Image.network(imagePath, height: 200, width: double.infinity, fit: BoxFit.cover),
-          ),
-          const SizedBox(height: 16),
-          Text('$time • $duration', style: const TextStyle(color: Colors.white70)),
-          const SizedBox(height: 12),
-          Text(description, style: const TextStyle(color: Colors.white)),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 28,
-                backgroundImage: (instructorImagePath.startsWith('assets/') || instructorImagePath.startsWith('lib/assets/'))
-                    ? AssetImage(instructorImagePath) as ImageProvider
-                    : NetworkImage(instructorImagePath),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(instructorName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                    Text(instructorExp, style: const TextStyle(color: Colors.white70)),
-                  ],
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Image.network(
+              widget.imagePath,
+              height: 250,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stack) => Container(
+                height: 250,
+                color: Colors.grey[800],
+                child: const Icon(
+                  Icons.image_not_supported,
+                  color: Colors.white54,
+                  size: 50,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 80), // مساحة إضافية فوق الزر
-        ],
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.title,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(widget.time,
+                      style: const TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 4),
+                  Text(widget.duration,
+                      style: const TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 8),
+                  Text(widget.description,
+                      style: const TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundImage:
+                            NetworkImage(widget.instructorImagePath),
+                        radius: 28,
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(widget.instructorName,
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 16)),
+                          Text(widget.instructorExp,
+                              style: const TextStyle(
+                                  color: Colors.white54, fontSize: 13)),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: widget.isFull || isLoading
+                        ? null
+                        : () => _bookClass(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: widget.isFull
+                          ? Colors.grey
+                          : const Color(0xFFB388FF),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Text(
+                            widget.isFull
+                                ? 'Class Full'
+                                : 'Book This Class',
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 18),
+                          ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

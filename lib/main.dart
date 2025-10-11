@@ -1,29 +1,35 @@
 import 'package:flutter/material.dart';
-import 'package:mys_app/screens/login.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'screens/home.dart';
 import 'screens/classes.dart';
 import 'screens/account.dart';
+import 'screens/login.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ اربطي المشروع بقاعدة Supabase (استبدلي القيم لو مشروع ثاني)
+  // ✅ تحميل ملف .env
+  await dotenv.load(fileName: ".env");
+
+  // ✅ تهيئة Supabase باستخدام القيم من ملف .env
   await Supabase.initialize(
-    url: 'https://ypwulvcsaeyagluczvwr.supabase.co',
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlwd3VsdmNzYWV5YWdsdWN6dndyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk5MTU1NDAsImV4cCI6MjA3NTQ5MTU0MH0.X5co-yU3dZ2j2v6neriRF9ewvfsphRZKr3abscJlupU',
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
+
+  print('✅ Supabase connected: ${dotenv.env['SUPABASE_URL']}');
 
   runApp(const GoGymApp());
 }
 
-// 🌟 تقدروا تستخدمون هذا العميل بأي شاشة: supa.from('table')...
+// 🌟 العميل الجاهز لأي شاشة
 final supa = Supabase.instance.client;
 
 class GoGymApp extends StatelessWidget {
   const GoGymApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     final scheme = ColorScheme.fromSeed(
@@ -43,8 +49,23 @@ class GoGymApp extends StatelessWidget {
           unselectedItemColor: Colors.white70,
         ),
       ),
-      home: const LoginPage(),
+      home: const AuthGate(),
     );
+  }
+}
+
+// ✅ يحدد هل المستخدم مسجل دخول أو لا
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) {
+      return LoginScreen(); // بدون const لتفادي الخطأ
+    } else {
+      return const RootShell();
+    }
   }
 }
 
@@ -56,7 +77,13 @@ class RootShell extends StatefulWidget {
 
 class _RootShellState extends State<RootShell> {
   int _index = 0;
-  final _pages = const [HomeScreen(), ClassesScreen(), AccountScreen()];
+
+  // ✅ الصفحات الأساسية
+  final _pages = const [
+    HomeScreen(),
+    ClassesScreen(),
+    AccountScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -66,8 +93,7 @@ class _RootShellState extends State<RootShell> {
         currentIndex: _index,
         onTap: (i) => setState(() => _index = i),
         items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.home_rounded), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
           BottomNavigationBarItem(
               icon: Icon(Icons.calendar_month_rounded), label: 'Classes'),
           BottomNavigationBarItem(

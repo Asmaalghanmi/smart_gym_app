@@ -4,37 +4,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 final supa = Supabase.instance.client;
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  await Supabase.initialize(
-    url: 'https://ypwulvcsaeyagluczvwr.supabase.co',
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlwd3VsdmNzYWV5YWdsdWN6dndyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk5MTU1NDAsImV4cCI6MjA3NTQ5MTU0MH0.X5co-yU3dZ2j2v6neriRF9ewvfsphRZKr3abscJlupU',
-  );
-
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: const LoginPage(),
-      theme: ThemeData(useMaterial3: true),
-    );
-  }
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
-  @override
-  State<LoginPage> createState() => _LoginPageState();
-}
-
-class _LoginPageState extends State<LoginPage> {
+class _LoginScreenState extends State<LoginScreen> {
   final _email = TextEditingController();
   final _pass = TextEditingController();
   bool _obscure = true;
@@ -49,7 +25,7 @@ class _LoginPageState extends State<LoginPage> {
             padding: const EdgeInsets.all(24),
             shrinkWrap: true,
             children: [
-              const SizedBox(height: 40), // add spacing from top
+              const SizedBox(height: 40),
               Image.asset(
                 'lib/assets/images/smartgym_logo.png',
                 width: 140,
@@ -116,7 +92,7 @@ class _LoginPageState extends State<LoginPage> {
               TextButton(
                 onPressed: () {
                   Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const SignUpPage()));
+                      MaterialPageRoute(builder: (_) => const SignUpScreen()));
                 },
                 child: const Text("No account? Create one"),
               ),
@@ -128,13 +104,13 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-class SignUpPage extends StatefulWidget {
-  const SignUpPage({super.key});
+class SignUpScreen extends StatefulWidget {
+  const SignUpScreen({super.key});
   @override
-  State<SignUpPage> createState() => _SignUpPageState();
+  State<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _SignUpPageState extends State<SignUpPage> {
+class _SignUpScreenState extends State<SignUpScreen> {
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _pass = TextEditingController();
@@ -187,8 +163,8 @@ class _SignUpPageState extends State<SignUpPage> {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                          content: Text(
-                              'Check your email to confirm (if enabled).')),
+                          content:
+                              Text('Check your email to confirm (if enabled).')),
                     );
                   } on AuthException catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -204,37 +180,6 @@ class _SignUpPageState extends State<SignUpPage> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
-  @override
-  Widget build(BuildContext context) {
-    final user = supa.auth.currentUser;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Home'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await supa.auth.signOut();
-              if (context.mounted) {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                  (route) => false,
-                );
-              }
-            },
-          )
-        ],
-      ),
-      body: Center(
-        child: Text('Logged in as: ${user?.email ?? "unknown"}'),
       ),
     );
   }

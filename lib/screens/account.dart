@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:mys_app/main.dart';
+
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});

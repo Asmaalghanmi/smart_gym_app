@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import '../widgets/common.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:mys_app/main.dart';
+
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
