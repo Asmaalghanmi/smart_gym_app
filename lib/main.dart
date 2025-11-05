@@ -4,27 +4,21 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'screens/home.dart';
 import 'screens/classes.dart';
+import 'screens/meals.dart';
+import 'screens/lockers.dart';
 import 'screens/account.dart';
 import 'screens/login.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // ✅ تحميل ملف .env
   await dotenv.load(fileName: ".env");
-
-  // ✅ تهيئة Supabase باستخدام القيم من ملف .env
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
-
-  print('✅ Supabase connected: ${dotenv.env['SUPABASE_URL']}');
-
   runApp(const GoGymApp());
 }
 
-// 🌟 العميل الجاهز لأي شاشة
 final supa = Supabase.instance.client;
 
 class GoGymApp extends StatelessWidget {
@@ -54,18 +48,13 @@ class GoGymApp extends StatelessWidget {
   }
 }
 
-// ✅ يحدد هل المستخدم مسجل دخول أو لا
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final session = Supabase.instance.client.auth.currentSession;
-    if (session == null) {
-      return LoginScreen(); // بدون const لتفادي الخطأ
-    } else {
-      return const RootShell();
-    }
+    final session = supa.auth.currentSession;
+    return session == null ? LoginScreen() : const RootShell();
   }
 }
 
@@ -78,26 +67,51 @@ class RootShell extends StatefulWidget {
 class _RootShellState extends State<RootShell> {
   int _index = 0;
 
-  // ✅ الصفحات الأساسية
   final _pages = const [
-    HomeScreen(),
-    ClassesScreen(),
-    AccountScreen(),
+    HomeScreen(),     // dashboard
+    ClassesScreen(),  // booking
+    MealsScreen(),    // meals
+    LockersScreen(),  // lockers
   ];
+
+  String _titleFor(int i) => switch (i) {
+        0 => 'Home',
+        1 => 'Classes',
+        2 => 'Meals',
+        3 => 'Lockers',
+        _ => 'Go Gym',
+      };
 
   @override
   Widget build(BuildContext context) {
+    final maxIndex = _pages.length - 1;
+    final safeIndex = _index.clamp(0, maxIndex);
     return Scaffold(
-      body: _pages[_index],
+      appBar: AppBar(
+        title: Text(_titleFor(safeIndex)),
+        backgroundColor: const Color(0xFF0E0E14),
+        actions: [
+          IconButton(
+            tooltip: 'Account',
+            icon: const Icon(Icons.person_rounded),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AccountScreen()),
+              );
+            },
+          ),
+        ],
+      ),
+      body: _pages[safeIndex],
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _index,
+        currentIndex: safeIndex,
+        type: BottomNavigationBarType.fixed,
         onTap: (i) => setState(() => _index = i),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.calendar_month_rounded), label: 'Classes'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.person_rounded), label: 'Account'),
+          BottomNavigationBarItem(icon: Icon(Icons.calendar_month_rounded), label: 'Classes'),
+          BottomNavigationBarItem(icon: Icon(Icons.restaurant_menu_rounded), label: 'Meals'),
+          BottomNavigationBarItem(icon: Icon(Icons.lock_rounded), label: 'Lockers'),
         ],
       ),
     );
