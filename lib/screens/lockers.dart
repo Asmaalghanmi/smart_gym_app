@@ -16,8 +16,7 @@ class _LockersScreenState extends State<LockersScreen> {
   int? _selected;
 
   // One uniform color
-  final Color tileColor = const Color(0xFF2ECC71);
-
+  final Color tileColor = Colors.pinkAccent;
   @override
   Widget build(BuildContext context) {
     final rows = (totalLockers / columns).ceil();
@@ -37,7 +36,8 @@ class _LockersScreenState extends State<LockersScreen> {
               Center(
                 child: Text(
                   'Choose a locker',
-                  style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                      fontSize: 34, fontWeight: FontWeight.w700),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -67,17 +67,23 @@ class _LockersScreenState extends State<LockersScreen> {
                                   color: tileColor,
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: isSelected ? Colors.white : Colors.black26,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.black26,
                                     width: isSelected ? 3 : 1,
                                   ),
                                   boxShadow: [
                                     if (isSelected)
-                                      BoxShadow(color: Colors.white.withOpacity(.2), blurRadius: 8),
+                                      BoxShadow(
+                                          color: Colors.white.withOpacity(.2),
+                                          blurRadius: 8),
                                   ],
                                 ),
                                 child: Text(
                                   '$n',
-                                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 18),
                                 ),
                               ),
                             ),
@@ -98,7 +104,9 @@ class _LockersScreenState extends State<LockersScreen> {
         child: FilledButton.icon(
           onPressed: _selected == null ? null : _book,
           icon: const Icon(Icons.lock_rounded),
-          label: Text(_selected == null ? 'Select a locker' : 'Book locker #$_selected'),
+          label: Text(_selected == null
+              ? 'Select a locker'
+              : 'Book locker #$_selected'),
         ),
       ),
     );
@@ -107,10 +115,10 @@ class _LockersScreenState extends State<LockersScreen> {
   void _book() {
     final n = _selected!;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Booked locker #$n (demo)')),
+      SnackBar(content: Text('Booked locker #$n')),
     );
     setState(() {
-      _selected = null; // clear selection in demo
+      _selected = null; // clear selection
     });
   }
 }

@@ -33,10 +33,10 @@ class _MealsScreenState extends State<MealsScreen> {
   int _partIndex = 0;
 
   final List<Map<String, dynamic>> _mockMeals = [
-    // Breakfast
     {
-      'icon': Icons.breakfast_dining, // منطقي للفطور
-      'color': Color(0xffFF9800),
+      // Breakfast
+      'image':
+          'https://images.pexels.com/photos/566566/pexels-photo-566566.jpeg',
       'name': 'Boiled Eggs with Wholegrain Toast and Avocado',
       'calories': 350,
       'protein_g': 19,
@@ -45,8 +45,8 @@ class _MealsScreenState extends State<MealsScreen> {
       'part': 'Breakfast',
     },
     {
-      'icon': Icons.coffee, // وجبة فطور مع مشروب صحي
-      'color': Color(0xffFFCCBC),
+      'image':
+          'https://images.pexels.com/photos/8005369/pexels-photo-8005369.jpeg',
       'name': 'Oatmeal with Milk, Banana & Peanut Butter',
       'calories': 320,
       'protein_g': 12,
@@ -55,8 +55,8 @@ class _MealsScreenState extends State<MealsScreen> {
       'part': 'Breakfast',
     },
     {
-      'icon': Icons.yard, // رمز للمنتجات الطازجة والخضروات
-      'color': Color(0xffDCE775),
+      'image':
+          'https://images.pexels.com/photos/5292918/pexels-photo-5292918.jpeg',
       'name': 'Low-fat Labneh with Brown Bread & Veggies',
       'calories': 260,
       'protein_g': 13,
@@ -64,11 +64,10 @@ class _MealsScreenState extends State<MealsScreen> {
       'carbs_g': 32,
       'part': 'Breakfast',
     },
-
     // Lunch
     {
-      'icon': Icons.lunch_dining, // بطبيعة الحال للغداء
-      'color': Color(0xff81D4FA),
+      'image':
+          'https://images.pexels.com/photos/30635713/pexels-photo-30635713.jpeg',
       'name': 'Grilled Chicken Breast with Brown Rice and Broccoli',
       'calories': 500,
       'protein_g': 38,
@@ -77,8 +76,8 @@ class _MealsScreenState extends State<MealsScreen> {
       'part': 'Lunch',
     },
     {
-      'icon': Icons.set_meal, // طبق متكامل
-      'color': Color(0xffAED581),
+      'image':
+          'https://images.pexels.com/photos/19859349/pexels-photo-19859349.jpeg',
       'name': 'Tuna Salad with Beans and Mixed Veggies',
       'calories': 430,
       'protein_g': 27,
@@ -87,8 +86,8 @@ class _MealsScreenState extends State<MealsScreen> {
       'part': 'Lunch',
     },
     {
-      'icon': Icons.restaurant_menu, // عشاء أو غداء متكامل
-      'color': Color(0xff4DB6AC),
+      'image':
+          'https://images.pexels.com/photos/18284912/pexels-photo-18284912.jpeg',
       'name': 'Grilled Steak (100g) with Roasted Potatoes & Green Salad',
       'calories': 470,
       'protein_g': 32,
@@ -96,11 +95,10 @@ class _MealsScreenState extends State<MealsScreen> {
       'carbs_g': 40,
       'part': 'Lunch',
     },
-
     // Dinner
     {
-      'icon': Icons.dinner_dining,
-      'color': Color(0xff7986CB),
+      'image':
+          'https://images.pexels.com/photos/5639499/pexels-photo-5639499.jpeg',
       'name': 'Grilled Salmon with Roasted Vegetables',
       'calories': 400,
       'protein_g': 32,
@@ -109,8 +107,8 @@ class _MealsScreenState extends State<MealsScreen> {
       'part': 'Dinner',
     },
     {
-      'icon': Icons.fastfood,
-      'color': Color(0xffBA68C8),
+      'image':
+          'https://images.pexels.com/photos/10464100/pexels-photo-10464100.jpeg',
       'name': 'Chickpea Curry with Spinach and Basmati Rice',
       'calories': 390,
       'protein_g': 14,
@@ -119,8 +117,8 @@ class _MealsScreenState extends State<MealsScreen> {
       'part': 'Dinner',
     },
     {
-      'icon': Icons.egg,
-      'color': Color(0xffFFD54F),
+      'image':
+          'https://images.pexels.com/photos/3850992/pexels-photo-3850992.jpeg',
       'name': 'Two Eggs with Low-fat Cottage Cheese and Salad',
       'calories': 315,
       'protein_g': 24,
@@ -253,8 +251,6 @@ class _MealsScreenState extends State<MealsScreen> {
               itemCount: filteredMeals.length,
               itemBuilder: (context, index) {
                 final m = filteredMeals[index];
-                final color =
-                    m['color'] is Color ? m['color'] : Colors.pinkAccent;
                 return Container(
                   decoration: BoxDecoration(
                     color: const Color(0xFF1E1E1E),
@@ -269,15 +265,21 @@ class _MealsScreenState extends State<MealsScreen> {
                       Row(
                         children: [
                           CircleAvatar(
-                            backgroundColor: color,
-                            child: Icon(m['icon'] ?? Icons.restaurant,
-                                color: Colors.black87),
                             radius: 18,
+                            backgroundImage:
+                                (m['image'] != null && m['image'] != '')
+                                    ? NetworkImage(m['image'])
+                                    : null,
+                            backgroundColor: Colors.transparent,
+                            child: (m['image'] == null || m['image'] == '')
+                                ? Icon(Icons.no_photography,
+                                    color: Colors.black38)
+                                : null,
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                               child: Text(
-                            m['name'],
+                            m['name'] ?? '',
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
