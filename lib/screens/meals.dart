@@ -1,5 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
+void main() => runApp(const MyApp());
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        useMaterial3: true,
+        scaffoldBackgroundColor: Color(0xFF121212),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.pink,
+          brightness: Brightness.dark,
+        ),
+      ),
+      home: const MealsScreen(),
+    );
+  }
+}
 
 class MealsScreen extends StatefulWidget {
   const MealsScreen({super.key});
@@ -8,262 +28,339 @@ class MealsScreen extends StatefulWidget {
 }
 
 class _MealsScreenState extends State<MealsScreen> {
-  final supa = Supabase.instance.client;
-
   DateTime _selectedDay = DateTime.now();
-  final List<String> _parts = const ['Breakfast', 'Lunch', 'Dinner'];
+  final List<String> _parts = ['Breakfast', 'Lunch', 'Dinner'];
   int _partIndex = 0;
 
-  bool _loading = true;
-  // all meals for selected day (any part)
-  List<Map<String, dynamic>> _dayMeals = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadMeals();
-  }
-
-  Future<void> _loadMeals() async {
-    setState(() => _loading = true);
-    final uid = supa.auth.currentUser?.id;
-    if (uid == null) {
-      setState(() { _dayMeals = []; _loading = false; });
-      return;
-    }
-    final start = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
-    final end = start.add(const Duration(days: 1));
-
-    final res = await supa
-        .from('meals')
-        .select()
-        .eq('user_id', uid)
-        .gte('date', start.toIso8601String())
-        .lt('date', end.toIso8601String())
-        .order('date', ascending: true);
-
-    final list = (res as List?)
-            ?.map((e) => Map<String, dynamic>.from(e as Map))
-            .toList() 
-        ?? <Map<String, dynamic>>[];
-
-    setState(() { _dayMeals = list; _loading = false; });
-  }
-
-  void _changeDay(int offset) {
-    setState(() {
-      _selectedDay = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day + offset);
-    });
-    _loadMeals();
-  }
-
-  Future<void> _addQuickMeal(String part) async {
-    final uid = supa.auth.currentUser?.id;
-    if (uid == null) return;
-    await supa.from('meals').insert({
-      'user_id': uid,
-      'name': 'Custom meal',
-      'calories': 300,
-      'protein_g': 20,
+  final List<Map<String, dynamic>> _mockMeals = [
+    // Breakfast
+    {
+      'icon': Icons.breakfast_dining, // منطقي للفطور
+      'color': Color(0xffFF9800),
+      'name': 'Boiled Eggs with Wholegrain Toast and Avocado',
+      'calories': 350,
+      'protein_g': 19,
+      'fat_g': 15,
+      'carbs_g': 35,
+      'part': 'Breakfast',
+    },
+    {
+      'icon': Icons.coffee, // وجبة فطور مع مشروب صحي
+      'color': Color(0xffFFCCBC),
+      'name': 'Oatmeal with Milk, Banana & Peanut Butter',
+      'calories': 320,
+      'protein_g': 12,
       'fat_g': 10,
-      'carbs_g': 30,
-      'part': part.toLowerCase(),
-      'date': DateTime.now().toIso8601String(),
-    });
-    _loadMeals();
-  }
+      'carbs_g': 46,
+      'part': 'Breakfast',
+    },
+    {
+      'icon': Icons.yard, // رمز للمنتجات الطازجة والخضروات
+      'color': Color(0xffDCE775),
+      'name': 'Low-fat Labneh with Brown Bread & Veggies',
+      'calories': 260,
+      'protein_g': 13,
+      'fat_g': 7,
+      'carbs_g': 32,
+      'part': 'Breakfast',
+    },
+
+    // Lunch
+    {
+      'icon': Icons.lunch_dining, // بطبيعة الحال للغداء
+      'color': Color(0xff81D4FA),
+      'name': 'Grilled Chicken Breast with Brown Rice and Broccoli',
+      'calories': 500,
+      'protein_g': 38,
+      'fat_g': 12,
+      'carbs_g': 48,
+      'part': 'Lunch',
+    },
+    {
+      'icon': Icons.set_meal, // طبق متكامل
+      'color': Color(0xffAED581),
+      'name': 'Tuna Salad with Beans and Mixed Veggies',
+      'calories': 430,
+      'protein_g': 27,
+      'fat_g': 11,
+      'carbs_g': 50,
+      'part': 'Lunch',
+    },
+    {
+      'icon': Icons.restaurant_menu, // عشاء أو غداء متكامل
+      'color': Color(0xff4DB6AC),
+      'name': 'Grilled Steak (100g) with Roasted Potatoes & Green Salad',
+      'calories': 470,
+      'protein_g': 32,
+      'fat_g': 17,
+      'carbs_g': 40,
+      'part': 'Lunch',
+    },
+
+    // Dinner
+    {
+      'icon': Icons.dinner_dining,
+      'color': Color(0xff7986CB),
+      'name': 'Grilled Salmon with Roasted Vegetables',
+      'calories': 400,
+      'protein_g': 32,
+      'fat_g': 22,
+      'carbs_g': 16,
+      'part': 'Dinner',
+    },
+    {
+      'icon': Icons.fastfood,
+      'color': Color(0xffBA68C8),
+      'name': 'Chickpea Curry with Spinach and Basmati Rice',
+      'calories': 390,
+      'protein_g': 14,
+      'fat_g': 8,
+      'carbs_g': 58,
+      'part': 'Dinner',
+    },
+    {
+      'icon': Icons.egg,
+      'color': Color(0xffFFD54F),
+      'name': 'Two Eggs with Low-fat Cottage Cheese and Salad',
+      'calories': 315,
+      'protein_g': 24,
+      'fat_g': 15,
+      'carbs_g': 12,
+      'part': 'Dinner',
+    },
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final partsRow = _buildPartChips();
-    final dayRow = _buildDayRow();
+    final days = List<DateTime>.generate(
+      7,
+      (i) => DateTime(
+          _selectedDay.year, _selectedDay.month, _selectedDay.day + i - 3),
+    );
 
-    return RefreshIndicator(
-      onRefresh: _loadMeals,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        children: [
-          Row(
-            children: [
-              IconButton(
-                tooltip: 'Prev day',
-                icon: const Icon(Icons.chevron_left_rounded),
-                onPressed: () => _changeDay(-1),
-              ),
-              Expanded(child: Center(child: Text(_titleDate(_selectedDay), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)))),
-              IconButton(
-                tooltip: 'Next day',
-                icon: const Icon(Icons.chevron_right_rounded),
-                onPressed: () => _changeDay(1),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          dayRow,
-          const SizedBox(height: 12),
-          partsRow,
-          const SizedBox(height: 16),
-          if (_loading)
-            const Padding(padding: EdgeInsets.only(top: 48), child: Center(child: CircularProgressIndicator()))
-          else
-            _sectionGrid(part: _parts[_partIndex]),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: () => _addQuickMeal(_parts[_partIndex]),
-            icon: const Icon(Icons.add_rounded),
-            label: Text('Add ${_parts[_partIndex].toLowerCase()}'),
-          ),
+    final todayPart = _parts[_partIndex];
+    final filteredMeals =
+        _mockMeals.where((m) => m['part'] == todayPart).toList();
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF121212),
+        title: const Text(
+          "My Meals",
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        centerTitle: false,
+        elevation: 0,
+        actions: [
+          IconButton(
+              onPressed: () {},
+              icon: const Icon(Icons.add, color: Colors.white)),
+          IconButton(
+              onPressed: () {},
+              icon: const Icon(Icons.share, color: Colors.white)),
         ],
       ),
-    );
-  }
-
-  // 3-box grid for selected part
-  Widget _sectionGrid({required String part}) {
-    final items = _dayMeals
-        .where((m) => (m['part'] ?? '').toString().toLowerCase() == part.toLowerCase())
-        .toList();
-
-    final cards = <Widget>[];
-    for (final m in items.take(3)) {
-      cards.add(_mealBox(m));
-    }
-    while (cards.length < 3) {
-      cards.add(_addBox(part));
-    }
-
-    return GridView.count(
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 1,            // one box per row on phone; switch to 2 if you want two columns
-      shrinkWrap: true,
-      mainAxisSpacing: 12,
-      childAspectRatio: 3.6,        // make it feel like a horizontal card
-      children: cards,
-    );
-  }
-
-  Widget _mealBox(Map<String, dynamic> m) {
-    final name = (m['name'] ?? 'Meal').toString();
-    final kcal = m['calories'] ?? 0;
-    final protein = m['protein_g'] ?? 0;
-    final fats = m['fat_g'] ?? m['fats_g'] ?? 0;
-    final carbs = m['carbs_g'] ?? 0;
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const CircleAvatar(radius: 18, child: Icon(Icons.restaurant_rounded, size: 18)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                const SizedBox(height: 4),
-                Text('$kcal kcal', style: TextStyle(color: Colors.white.withOpacity(.7))),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    _macroPill('Protein', protein, Colors.green),
-                    const SizedBox(width: 8),
-                    _macroPill('Fats', fats, Colors.orange),
-                    const SizedBox(width: 8),
-                    _macroPill('Carbs', carbs, Colors.yellow),
-                  ],
-                ),
-              ],
+          ClipRect(
+            child: SizedBox(
+              height: 52,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemCount: days.length,
+                itemBuilder: (ctx, i) {
+                  final d = days[i];
+                  final active = d.day == _selectedDay.day &&
+                      d.month == _selectedDay.month;
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedDay = d),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 140),
+                      width: 45,
+                      decoration: BoxDecoration(
+                        color: active
+                            ? Colors.pinkAccent
+                            : const Color(0xFF1E1E1E),
+                        borderRadius: BorderRadius.circular(13),
+                        border: Border.all(
+                          color: active ? Colors.pinkAccent : Colors.white24,
+                          width: 1.2,
+                        ),
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _monthAbbr(d.month),
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(.72),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 9,
+                              ),
+                            ),
+                            Text(
+                              d.day.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
           ),
-          IconButton(icon: const Icon(Icons.more_horiz_rounded), onPressed: () {/* options */}),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+            child: Row(
+              children: List.generate(_parts.length, (i) {
+                final selected = i == _partIndex;
+                return Padding(
+                  padding:
+                      EdgeInsets.only(right: i < _parts.length - 1 ? 8 : 0),
+                  child: ChoiceChip(
+                    label: Text(_parts[i],
+                        style: TextStyle(
+                          color: selected ? Colors.black : Colors.white,
+                          fontWeight: FontWeight.bold,
+                        )),
+                    selected: selected,
+                    selectedColor: Colors.pinkAccent,
+                    backgroundColor: const Color(0xFF1E1E1E),
+                    onSelected: (_) => setState(() => _partIndex = i),
+                    showCheckmark: selected,
+                    checkmarkColor: Colors.black,
+                    labelPadding:
+                        const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+                  ),
+                );
+              }),
+            ),
+          ),
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              separatorBuilder: (_, __) => const SizedBox(height: 14),
+              itemCount: filteredMeals.length,
+              itemBuilder: (context, index) {
+                final m = filteredMeals[index];
+                final color =
+                    m['color'] is Color ? m['color'] : Colors.pinkAccent;
+                return Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E1E1E),
+                    borderRadius: BorderRadius.circular(18),
+                    border:
+                        Border.all(color: Colors.pinkAccent.withOpacity(.22)),
+                  ),
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: color,
+                            child: Icon(m['icon'] ?? Icons.restaurant,
+                                color: Colors.black87),
+                            radius: 18,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                              child: Text(
+                            m['name'],
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          )),
+                          const Icon(Icons.more_horiz, color: Colors.white70),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Icon(Icons.local_fire_department,
+                              color: Colors.pinkAccent, size: 18),
+                          const SizedBox(width: 5),
+                          Text('${m['calories']} kcal -100g',
+                              style: const TextStyle(
+                                  fontSize: 13, color: Colors.white60)),
+                        ],
+                      ),
+                      const SizedBox(height: 9),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _nutrientIndicator(
+                              "Protein", m['protein_g'], Colors.greenAccent),
+                          _nutrientIndicator(
+                              "Fats", m['fat_g'], Colors.orangeAccent),
+                          _nutrientIndicator(
+                              "Carbs", m['carbs_g'], Colors.amberAccent),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 10),
         ],
       ),
     );
   }
 
-  Widget _addBox(String part) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: () => _addQuickMeal(part),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor.withOpacity(.6),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white12),
-        ),
-        child: Row(
+  Widget _nutrientIndicator(String name, int grams, Color color) {
+    return Column(
+      children: [
+        Row(
           children: [
-            const CircleAvatar(radius: 18, child: Icon(Icons.add_rounded)),
-            const SizedBox(width: 12),
-            Expanded(child: Text('Add ${part.toLowerCase()} item')),
+            Container(
+              height: 8,
+              width: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 3),
+            Text(
+              "$grams" "g",
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, fontSize: 15, color: color),
+            ),
           ],
         ),
-      ),
+        Text(
+          name,
+          style: const TextStyle(
+              fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w500),
+        )
+      ],
     );
   }
 
-  Widget _macroPill(String label, num grams, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withOpacity(.2),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(.5)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-          const SizedBox(width: 6),
-          Text('${grams}g $label'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPartChips() {
-    return Row(
-      children: List.generate(_parts.length, (i) {
-        final selected = i == _partIndex;
-        return Padding(
-          padding: EdgeInsets.only(right: i < _parts.length - 1 ? 12 : 0),
-          child: ChoiceChip(
-            label: Text(_parts[i]),
-            selected: selected,
-            onSelected: (_) {
-              setState(() => _partIndex = i);
-              // no need to refetch since we fetched all parts for the day
-            },
-          ),
-        );
-      }),
-    );
-  }
-
-  Widget _buildDayRow() {
-    final base = _selectedDay;
-    final days = List<DateTime>.generate(5, (i) => DateTime(base.year, base.month, base.day + i - 2));
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: days.map((d) {
-        final isActive = d.year == _selectedDay.year && d.month == _selectedDay.month && d.day == _selectedDay.day;
-        return ChoiceChip(
-          label: Text(_shortDate(d)),
-          selected: isActive,
-          onSelected: (_) { setState(() => _selectedDay = d); _loadMeals(); },
-        );
-      }).toList(),
-    );
-  }
-
-  String _titleDate(DateTime d) => '${_monthName(d.month)} ${d.day}';
-  String _shortDate(DateTime d) => '${_monthAbbr(d.month)} ${d.day}';
-  String _monthName(int m) => const ['January','February','March','April','May','June','July','August','September','October','November','December'][m-1];
-  String _monthAbbr(int m) => const ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m-1];
+  String _monthAbbr(int m) => const [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec'
+      ][m - 1];
 }
