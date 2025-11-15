@@ -68,10 +68,10 @@ class _RootShellState extends State<RootShell> {
   int _index = 0;
 
   final _pages = const [
-    HomeScreen(),     // dashboard
-    ClassesScreen(),  // booking
-    MealsScreen(),    // meals
-    LockersScreen(),  // lockers
+    Home(), // dashboard
+    ClassesScreen(), // booking
+    MealsScreen(), // meals
+    LockersScreen(), // lockers
   ];
 
   String _titleFor(int i) => switch (i) {
@@ -108,10 +108,14 @@ class _RootShellState extends State<RootShell> {
         type: BottomNavigationBarType.fixed,
         onTap: (i) => setState(() => _index = i),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_month_rounded), label: 'Classes'),
-          BottomNavigationBarItem(icon: Icon(Icons.restaurant_menu_rounded), label: 'Meals'),
-          BottomNavigationBarItem(icon: Icon(Icons.lock_rounded), label: 'Lockers'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.home_rounded), label: 'Home'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.calendar_month_rounded), label: 'Classes'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.restaurant_menu_rounded), label: 'Meals'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.lock_rounded), label: 'Lockers'),
         ],
       ),
     );

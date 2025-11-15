@@ -1,22 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'login.dart';
 import 'renew_screen.dart';
+
+final supa = Supabase.instance.client;
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // بيانات العرض (ضعها ديناميكية لاحقاً)
-    final String userName = "Sara Ahmed";
-    final String userEmail = "sara.ahmed@email.com";
-    final String phoneNumber = "+966512345678";
+    final user = supa.auth.currentUser;
+
+    final String userName = user?.email?.split('@')[0] ?? "User";
+    final String userEmail = user?.email ?? "email@example.com";
+
+    // بيانات مؤقتة — عدلي عليها لاحقاً
+    final String phoneNumber = "+966500000000";
     final String membershipPlan = "Premium (6 Months)";
     final String membershipStatus = "Active";
     final String expiryDate = "2026-02-22";
-    final int classCount = 12; // عدد الكلاسات المحجوزة/الحاضرة
+    final int classCount = 12;
     final int mealsOrdered = 25;
     final int totalVisits = 33;
-    final String lastCheckIn = "2025-11-04 18:12"; // آخر دخول فعلي
+    final String lastCheckIn = "-";
 
     return Scaffold(
       appBar: AppBar(
@@ -35,28 +43,35 @@ class AccountScreen extends StatelessWidget {
             child: Column(
               children: [
                 const CircleAvatar(
+                  radius: 42,
                   backgroundImage: NetworkImage(
                       "https://randomuser.me/api/portraits/women/44.jpg"),
-                  radius: 42,
                 ),
                 const SizedBox(height: 10),
-                Text(userName,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                        color: Colors.white)),
+                Text(
+                  userName,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: Colors.white),
+                ),
                 const SizedBox(height: 5),
-                Text(userEmail,
-                    style:
-                        const TextStyle(fontSize: 14, color: Colors.white54)),
+                Text(
+                  userEmail,
+                  style: const TextStyle(fontSize: 14, color: Colors.white54),
+                ),
                 const SizedBox(height: 2),
-                Text(phoneNumber,
-                    style:
-                        const TextStyle(fontSize: 14, color: Colors.white54)),
+                Text(
+                  phoneNumber,
+                  style: const TextStyle(fontSize: 14, color: Colors.white54),
+                ),
               ],
             ),
           ),
+
           const SizedBox(height: 22),
+
+          // بطاقة العضوية
           Card(
             color: const Color(0xFF181820),
             shape: RoundedRectangleBorder(
@@ -85,7 +100,9 @@ class AccountScreen extends StatelessWidget {
               ),
             ),
           ),
+
           const SizedBox(height: 18),
+
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -94,7 +111,9 @@ class AccountScreen extends StatelessWidget {
               _infoTile("Visits", totalVisits, Icons.history),
             ],
           ),
+
           const SizedBox(height: 26),
+
           Card(
             color: const Color(0xFF181820),
             elevation: 0,
@@ -109,19 +128,43 @@ class AccountScreen extends StatelessWidget {
                   subtitle: Text(lastCheckIn,
                       style: const TextStyle(color: Colors.white70)),
                 ),
+
                 ListTile(
                   leading: Icon(Icons.lock, color: Colors.blue[200]),
-                  title: const Text("Change Password",
-                      style: TextStyle(color: Colors.white)),
+                  title: const Text(
+                    "Change Password",
+                    style: TextStyle(color: Colors.white),
+                  ),
                   onTap: () {},
                 ),
+
                 const Divider(color: Colors.white12, height: 1),
+
+                // 🔥 زر تسجيل الخروج
                 ListTile(
                   leading:
                       const Icon(Icons.exit_to_app, color: Colors.redAccent),
-                  title: const Text("Logout",
-                      style: TextStyle(color: Colors.white)),
-                  onTap: () {},
+                  title: const Text(
+                    "Logout",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () async {
+                    try {
+                      await supa.auth.signOut();
+
+                      if (!context.mounted) return;
+
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        (route) => false,
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("Logout error: $e")),
+                      );
+                    }
+                  },
                 ),
               ],
             ),
@@ -140,11 +183,15 @@ class AccountScreen extends StatelessWidget {
           child: Icon(icon, color: Colors.pink[400]),
         ),
         const SizedBox(height: 6),
-        Text("$value",
-            style: const TextStyle(
-                color: Colors.pink, fontWeight: FontWeight.bold)),
-        Text(label,
-            style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        Text(
+          "$value",
+          style:
+              const TextStyle(color: Colors.pink, fontWeight: FontWeight.bold),
+        ),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
+        ),
       ],
     );
   }
