@@ -38,6 +38,10 @@ class _HomeState extends State<Home> {
     fetchLocker();
     fetchUpcomingClasses();
     fetchHistory();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      fetchHistory();
+    });
   }
 
   // ================== FETCH MEALS ==================
@@ -46,10 +50,8 @@ class _HomeState extends State<Home> {
       final user = supa.auth.currentUser;
       if (user == null) return;
 
-      final response = await supa
-          .from('todays_user_meals')
-          .select('*')
-          .eq('user_id', user.id);
+      final response =
+          await supa.from('todays_user_meals').select('*').eq('user_id', user.id);
 
       if (!mounted) return;
       setState(() {
@@ -93,7 +95,6 @@ class _HomeState extends State<Home> {
       final user = supa.auth.currentUser;
       if (user == null) return;
 
-      // اليوم (بس التاريخ) بصيغة YYYY-MM-DD
       final today = DateTime.now().toUtc();
       final todayStr = DateFormat('yyyy-MM-dd').format(today);
 
@@ -139,7 +140,7 @@ class _HomeState extends State<Home> {
     }
   }
 
-  // ================== FETCH HISTORY ==================
+  // ================== FIXED FETCH HISTORY ==================
   Future<void> fetchHistory() async {
     try {
       final user = supa.auth.currentUser;
@@ -152,21 +153,32 @@ class _HomeState extends State<Home> {
           .order('created_at', ascending: false)
           .limit(5);
 
-      final List data = response as List;
+      print("📦 HISTORY RESPONSE: $response"); // <-- Debug line
 
-      if (data.isNotEmpty) {
-        lastVisit = DateTime.parse(data.first['created_at']);
+      final List data = (response is List)
+          ? response
+          : (response as List<dynamic>);
+
+      if (data.isEmpty) {
+        if (!mounted) return;
+        setState(() {
+          lastVisit = null;
+          recentVisits = [];
+          loadingHistory = false;
+        });
+        return;
       }
 
-      recentVisits = data
-          .map<DateTime>((row) => DateTime.parse(row['created_at']))
-          .toList();
-
-      if (!mounted) return;
-      setState(() => loadingHistory = false);
+      setState(() {
+        lastVisit = DateTime.parse(data.first['created_at']);
+        recentVisits = data
+            .map<DateTime>((row) => DateTime.parse(row['created_at']))
+            .toList();
+        loadingHistory = false;
+      });
     } catch (e) {
-      print("ERROR fetching history: $e");
-      loadingHistory = false;
+      print("⚠️ ERROR fetching history: $e");
+      setState(() => loadingHistory = false);
     }
   }
 
@@ -188,304 +200,328 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     final user = supa.auth.currentUser;
+    final qrLink =
+        "https://ypwulvcsaeyagluczvwr.supabase.co/functions/v1/checkin?user_id=${user?.id}";
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ------------------ EMAIL ------------------
-              Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 25,
-                    backgroundColor: Colors.purple,
-                    child: Icon(Icons.person, color: Colors.white),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    user?.email ?? "",
-                    style: const TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 25),
-
-              // ------------------ QR CODE ------------------
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: QrImageView(
-                    data: user?.id ?? "unknown-user",
-                    version: QrVersions.auto,
-                    size: 180,
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // ------------------ UPCOMING CLASSES ------------------
-              const Text(
-                "Upcoming Classes",
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xff1e1e1e),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: loadingClasses
-                    ? const Center(
-                        child: CircularProgressIndicator(color: Colors.pink))
-                    : upcomingClasses.isEmpty
-                        ? const Text(
-                            "No upcoming classes booked.",
-                            style: TextStyle(color: Colors.white70),
-                          )
-                        : Column(
-                            children: upcomingClasses.map((cls) {
-                              return Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Icon(Icons.fitness_center,
-                                        color: Colors.white70),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            cls['title'] ?? '',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            cls['trainer'] != null
-                                                ? "Trainer: ${cls['trainer']}"
-                                                : "",
-                                            style: const TextStyle(
-                                                color: Colors.white70,
-                                                fontSize: 13),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            formatDateTime(
-                                              cls['date']?.toString(),
-                                              cls['time']?.toString(),
-                                            ),
-                                            style: const TextStyle(
-                                                color: Colors.white60,
-                                                fontSize: 12),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // ------------------ TODAY'S MEALS ------------------
-              const Center(
-                child: Text(
-                  "Today's Meals",
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold),
-                ),
-              ),
-
-              const SizedBox(height: 14),
-
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xff1e1e1e),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: loadingMeals
-                    ? const Center(
-                        child: CircularProgressIndicator(color: Colors.pink))
-                    : todaysMeals.isEmpty
-                        ? const Text(
-                            "No meals selected for today.",
-                            style: TextStyle(color: Colors.white70),
-                          )
-                        : Column(
-                            children: todaysMeals.map((meal) {
-                              return Padding(
-                                padding:
-                                    const EdgeInsets.only(bottom: 12.0),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.restaurant_menu,
-                                        color: Colors.white70),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            meal['part'] ?? "",
-                                            style: const TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.bold),
-                                          ),
-                                          Text(
-                                            meal['name'] ?? "",
-                                            style: const TextStyle(
-                                                color: Colors.white70),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // ------------------ LOCKER ------------------
-              const Text(
-                "Locker",
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xff1e1e1e),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            await fetchHistory();
+            await fetchMeals();
+            await fetchLocker();
+            await fetchUpcomingClasses();
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ------------------ EMAIL ------------------
+                Row(
                   children: [
-                    const Icon(Icons.lock_outline, color: Colors.white70),
-                    const SizedBox(width: 10),
+                    const CircleAvatar(
+                      radius: 25,
+                      backgroundColor: Colors.purple,
+                      child: Icon(Icons.person, color: Colors.white),
+                    ),
+                    const SizedBox(width: 12),
                     Text(
-                      loadingLocker
-                          ? "Loading..."
-                          : lockerNumber != null
-                              ? "Locker Number: $lockerNumber"
-                              : "Locker Number: —",
+                      user?.email ?? "",
                       style: const TextStyle(color: Colors.white, fontSize: 16),
                     ),
                   ],
                 ),
-              ),
 
-              const SizedBox(height: 24),
+                const SizedBox(height: 25),
 
-              // ------------------ HISTORY ------------------
-              const Text(
-                "History",
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xff1e1e1e),
-                  borderRadius: BorderRadius.circular(20),
+                // ------------------ QR CODE ------------------
+                Center(
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: QrImageView(
+                          data: qrLink,
+                          version: QrVersions.auto,
+                          size: 180,
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        "Scan this QR code to check-in",
+                        style: TextStyle(color: Colors.white70, fontSize: 14),
+                      ),
+                    ],
+                  ),
                 ),
-                child: loadingHistory
-                    ? const Center(
-                        child: CircularProgressIndicator(color: Colors.pink))
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Last visit: ${lastVisit != null ? formatVisit(lastVisit!) : "—"}",
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 14),
-                          ),
-                          const SizedBox(height: 12),
-                          const Divider(color: Colors.white24),
-                          const SizedBox(height: 8),
-                          const Text(
-                            "Recent visits:",
-                            style: TextStyle(
-                                color: Colors.white70,
-                                fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          if (recentVisits.isEmpty)
-                            const Text(
-                              "No history yet.",
-                              style:
-                                  TextStyle(color: Colors.white60, fontSize: 13),
+
+                const SizedBox(height: 24),
+
+                // ------------------ UPCOMING CLASSES ------------------
+                const Text(
+                  "Upcoming Classes",
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xff1e1e1e),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: loadingClasses
+                      ? const Center(
+                          child: CircularProgressIndicator(color: Colors.pink))
+                      : upcomingClasses.isEmpty
+                          ? const Text(
+                              "No upcoming classes booked.",
+                              style: TextStyle(color: Colors.white70),
                             )
-                          else
-                            Column(
-                              children: recentVisits.map((dt) {
+                          : Column(
+                              children: upcomingClasses.map((cls) {
                                 return Padding(
                                   padding:
-                                      const EdgeInsets.symmetric(vertical: 4),
+                                      const EdgeInsets.symmetric(vertical: 8),
                                   child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      const Icon(Icons.access_time,
-                                          size: 16, color: Colors.white60),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        formatVisit(dt),
-                                        style: const TextStyle(
-                                            color: Colors.white60,
-                                            fontSize: 13),
+                                      const Icon(Icons.fitness_center,
+                                          color: Colors.white70),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              cls['title'] ?? '',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              cls['trainer'] != null
+                                                  ? "Trainer: ${cls['trainer']}"
+                                                  : "",
+                                              style: const TextStyle(
+                                                  color: Colors.white70,
+                                                  fontSize: 13),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              formatDateTime(
+                                                cls['date']?.toString(),
+                                                cls['time']?.toString(),
+                                              ),
+                                              style: const TextStyle(
+                                                  color: Colors.white60,
+                                                  fontSize: 12),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ],
                                   ),
                                 );
                               }).toList(),
                             ),
-                        ],
-                      ),
-              ),
+                ),
 
-              const SizedBox(height: 40),
-            ],
+                const SizedBox(height: 24),
+
+                // ------------------ TODAY'S MEALS ------------------
+                const Center(
+                  child: Text(
+                    "Today's Meals",
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xff1e1e1e),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: loadingMeals
+                      ? const Center(
+                          child: CircularProgressIndicator(color: Colors.pink))
+                      : todaysMeals.isEmpty
+                          ? const Text(
+                              "No meals selected for today.",
+                              style: TextStyle(color: Colors.white70),
+                            )
+                          : Column(
+                              children: todaysMeals.map((meal) {
+                                return Padding(
+                                  padding:
+                                      const EdgeInsets.only(bottom: 12.0),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.restaurant_menu,
+                                          color: Colors.white70),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              meal['part'] ?? "",
+                                              style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight:
+                                                      FontWeight.bold),
+                                            ),
+                                            Text(
+                                              meal['name'] ?? "",
+                                              style: const TextStyle(
+                                                  color: Colors.white70),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // ------------------ LOCKER ------------------
+                const Text(
+                  "Locker",
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xff1e1e1e),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.lock_outline, color: Colors.white70),
+                      const SizedBox(width: 10),
+                      Text(
+                        loadingLocker
+                            ? "Loading..."
+                            : lockerNumber != null
+                                ? "Locker Number: $lockerNumber"
+                                : "Locker Number: —",
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // ------------------ HISTORY ------------------
+                const Text(
+                  "History",
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xff1e1e1e),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: loadingHistory
+                      ? const Center(
+                          child: CircularProgressIndicator(color: Colors.pink))
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Last visit: ${lastVisit != null ? formatVisit(lastVisit!) : "—"}",
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 14),
+                            ),
+                            const SizedBox(height: 12),
+                            const Divider(color: Colors.white24),
+                            const SizedBox(height: 8),
+                            const Text(
+                              "Recent visits:",
+                              style: TextStyle(
+                                  color: Colors.white70,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 8),
+                            if (recentVisits.isEmpty)
+                              const Text(
+                                "No history yet.",
+                                style: TextStyle(
+                                    color: Colors.white60, fontSize: 13),
+                              )
+                            else
+                              Column(
+                                children: recentVisits.map((dt) {
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 4),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.access_time,
+                                            size: 16,
+                                            color: Colors.white60),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          formatVisit(dt),
+                                          style: const TextStyle(
+                                              color: Colors.white60,
+                                              fontSize: 13),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                          ],
+                        ),
+                ),
+
+                const SizedBox(height: 40),
+              ],
+            ),
           ),
         ),
       ),

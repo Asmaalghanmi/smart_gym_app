@@ -100,7 +100,7 @@ class _MealsScreenState extends State<MealsScreen> {
 
       if (alreadyBookedSamePart) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text("⚠️ You already booked a $currentPart meal today"),
+          content: Text("⚠️ You already booked a $currentPart meal for this day"),
           backgroundColor: Colors.orangeAccent.shade700,
         ));
         return;
