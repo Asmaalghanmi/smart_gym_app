@@ -34,16 +34,26 @@ class _ClassesScreenState extends State<ClassesScreen>
       final supabase = Supabase.instance.client;
       final user = supabase.auth.currentUser;
 
+      // ✅ نجيب اليوم كـ string بالشكل YYYY-MM-DD
+      final todayStr = DateTime.now().toIso8601String().split('T').first;
+
+      // ✅ الكلاسات: من اليوم وطالع فقط
       final sessions = await supabase
           .from('class_sessions')
-          .select('*, classes(title, trainer, image_url, duration_min, capacity)')
-          .order('session_date', ascending: true);
+          .select(
+              '*, classes(title, trainer, image_url, duration_min, capacity)')
+          .gte('session_date', todayStr)
+          .order('session_date', ascending: true)
+          .order('start_time', ascending: true);
 
+      // ✅ الكلاسات المحجوزة للمستخدم (نجيب الكل، حتى القديمة؛
+      // وفي الواجهة منعنا إلغاء القديمة)
       final booked = user == null
           ? []
           : await supabase
               .from('bookings')
-              .select('*, class_sessions!inner(*, classes(title, trainer, image_url, duration_min)))')
+              .select(
+                  '*, class_sessions!inner(*, classes(title, trainer, image_url, duration_min)))')
               .eq('user_id', user.id);
 
       setState(() {
@@ -305,6 +315,17 @@ class _ClassesScreenState extends State<ClassesScreen>
         final session = booking['class_sessions'] ?? {};
         final classInfo = session['classes'] ?? {};
 
+        // ✅ نحسب إذا الكلاس ماضي ولا لا
+        final dateStr = session['session_date'];
+        DateTime? sessionDate;
+        if (dateStr != null) {
+          sessionDate = DateTime.tryParse(dateStr);
+        }
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final bool isPast =
+            sessionDate != null && sessionDate.isBefore(today);
+
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
@@ -347,43 +368,47 @@ class _ClassesScreenState extends State<ClassesScreen>
                     const SizedBox(height: 8),
                     Text(
                       'Trainer: ${classInfo['trainer'] ?? 'Unknown'}',
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 14),
+                      style: const TextStyle(
+                          color: Colors.white70, fontSize: 14),
                     ),
-                    const SizedBox(height: 8),
-                    ElevatedButton(
-                      onPressed: () async {
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Cancel Booking?'),
-                            content: const Text(
-                                'Are you sure you want to cancel this booking?'),
-                            actions: [
-                              TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(context, false),
-                                  child: const Text('No')),
-                              TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(context, true),
-                                  child: const Text('Yes')),
-                            ],
-                          ),
-                        );
-                        if (confirm == true) {
-                          _cancelBooking(booking['id'], session['id']);
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.redAccent,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
+                    const SizedBox(height: 12),
+
+                    // ✅ لو الكلاس ماضي: ما في زر إلغاء
+                    if (!isPast)
+                      ElevatedButton(
+                        onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Cancel Booking?'),
+                              content: const Text(
+                                  'Are you sure you want to cancel this booking?'),
+                              actions: [
+                                TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
+                                    child: const Text('No')),
+                                TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
+                                    child: const Text('Yes')),
+                              ],
+                            ),
+                          );
+                          if (confirm == true) {
+                            _cancelBooking(booking['id'], session['id']);
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                        child: const Text(
+                          'Cancel Booking',
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
-                      child: const Text(
-                        'Cancel Booking',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
                   ],
                 ),
               ),
