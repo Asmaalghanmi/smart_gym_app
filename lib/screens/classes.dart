@@ -187,8 +187,11 @@ class _ClassesScreenState extends State<ClassesScreen>
     final filteredSessions = sessions.where((session) {
       if (session['session_date'] == null) return false;
       final date = DateTime.parse(session['session_date']);
-      final weekdayIndex = (date.weekday % 7);
-      return weekdayIndex == _selectedDayIndex + 1;
+
+      // ✅ Monday..Sunday (1..7) → 0..6 عشان تطابق الإندكس حق _days
+      final weekdayIndex = date.weekday - 1;
+
+      return weekdayIndex == _selectedDayIndex;
     }).toList();
 
     if (filteredSessions.isEmpty) {
@@ -224,7 +227,7 @@ class _ClassesScreenState extends State<ClassesScreen>
                   instructorExp: 'Supabase Data',
                   imagePath: classInfo['image_url'] ?? '',
                   instructorImagePath:
-                      'https://i.pravatar.cc/150?img=${index + 5}',
+                      'https://i.pravatar.cc/150?img=${index + 5}}',
                   isFull: (session['spots_left'] ?? 0) <= 0,
                 ),
               ),

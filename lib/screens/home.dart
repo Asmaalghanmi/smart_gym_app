@@ -50,17 +50,20 @@ class _HomeState extends State<Home> {
       final user = supa.auth.currentUser;
       if (user == null) return;
 
-      final response =
-          await supa.from('todays_user_meals').select('*').eq('user_id', user.id);
+      final response = await supa
+          .from('todays_user_meals')
+          .select('*')
+          .eq('user_id', user.id);
 
       if (!mounted) return;
       setState(() {
-        todaysMeals = response;
+        todaysMeals = List<Map<String, dynamic>>.from(response);
         loadingMeals = false;
       });
     } catch (e) {
       print("ERROR fetching meals: $e");
-      loadingMeals = false;
+      if (!mounted) return;
+      setState(() => loadingMeals = false);
     }
   }
 
@@ -85,7 +88,8 @@ class _HomeState extends State<Home> {
       setState(() => loadingLocker = false);
     } catch (e) {
       print("ERROR fetching locker: $e");
-      loadingLocker = false;
+      if (!mounted) return;
+      setState(() => loadingLocker = false);
     }
   }
 
@@ -95,35 +99,37 @@ class _HomeState extends State<Home> {
       final user = supa.auth.currentUser;
       if (user == null) return;
 
-      final today = DateTime.now().toUtc();
-      final todayStr = DateFormat('yyyy-MM-dd').format(today);
+      // من اليوم وطالع
+      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
       final response = await supa
-          .from('bookings')
+          .from('class_sessions')
           .select('''
-            id,
-            session:class_sessions (
-              session_date,
-              start_time,
-              class:classes (
-                title,
-                trainer
-              )
+            session_date,
+            start_time,
+            classes (
+              title,
+              trainer
+            ),
+            bookings!inner (
+              user_id
             )
           ''')
-          .eq('user_id', user.id)
-          .gte('class_sessions.session_date', todayStr)
-          .order('class_sessions.session_date', ascending: true)
+          // فقط الكلاسات اللي هذا اليوزر حاجزها
+          .eq('bookings.user_id', user.id)
+          // تاريخ الجلسة من اليوم فما فوق
+          .gte('session_date', todayStr)
+          .order('session_date', ascending: true)
+          .order('start_time', ascending: true)
           .limit(3);
 
-      final List data = response as List;
+      final List data = List<Map<String, dynamic>>.from(response);
 
-      final List<Map<String, dynamic>> mapped = data.map((row) {
-        final session = row['session'] ?? {};
-        final cls = session['class'] ?? {};
+      final upcoming = data.map<Map<String, dynamic>>((row) {
+        final cls = row['classes'] ?? {};
         return {
-          'date': session['session_date'],
-          'time': session['start_time'],
+          'date': row['session_date'],
+          'time': row['start_time'],
           'title': cls['title'],
           'trainer': cls['trainer'],
         };
@@ -131,16 +137,17 @@ class _HomeState extends State<Home> {
 
       if (!mounted) return;
       setState(() {
-        upcomingClasses = mapped;
+        upcomingClasses = upcoming;
         loadingClasses = false;
       });
     } catch (e) {
       print("ERROR fetching upcoming classes: $e");
-      loadingClasses = false;
+      if (!mounted) return;
+      setState(() => loadingClasses = false);
     }
   }
 
-  // ================== FIXED FETCH HISTORY ==================
+  // ================== FETCH HISTORY ==================
   Future<void> fetchHistory() async {
     try {
       final user = supa.auth.currentUser;
@@ -153,11 +160,7 @@ class _HomeState extends State<Home> {
           .order('created_at', ascending: false)
           .limit(5);
 
-      print("📦 HISTORY RESPONSE: $response"); // <-- Debug line
-
-      final List data = (response is List)
-          ? response
-          : (response as List<dynamic>);
+      final List data = List<Map<String, dynamic>>.from(response);
 
       if (data.isEmpty) {
         if (!mounted) return;
@@ -169,6 +172,7 @@ class _HomeState extends State<Home> {
         return;
       }
 
+      if (!mounted) return;
       setState(() {
         lastVisit = DateTime.parse(data.first['created_at']);
         recentVisits = data
@@ -178,6 +182,7 @@ class _HomeState extends State<Home> {
       });
     } catch (e) {
       print("⚠️ ERROR fetching history: $e");
+      if (!mounted) return;
       setState(() => loadingHistory = false);
     }
   }
@@ -270,9 +275,10 @@ class _HomeState extends State<Home> {
                 const Text(
                   "Upcoming Classes",
                   style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold),
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 10),
 
@@ -285,7 +291,8 @@ class _HomeState extends State<Home> {
                   ),
                   child: loadingClasses
                       ? const Center(
-                          child: CircularProgressIndicator(color: Colors.pink))
+                          child: CircularProgressIndicator(color: Colors.pink),
+                        )
                       : upcomingClasses.isEmpty
                           ? const Text(
                               "No upcoming classes booked.",
@@ -322,8 +329,9 @@ class _HomeState extends State<Home> {
                                                   ? "Trainer: ${cls['trainer']}"
                                                   : "",
                                               style: const TextStyle(
-                                                  color: Colors.white70,
-                                                  fontSize: 13),
+                                                color: Colors.white70,
+                                                fontSize: 13,
+                                              ),
                                             ),
                                             const SizedBox(height: 2),
                                             Text(
@@ -332,8 +340,9 @@ class _HomeState extends State<Home> {
                                                 cls['time']?.toString(),
                                               ),
                                               style: const TextStyle(
-                                                  color: Colors.white60,
-                                                  fontSize: 12),
+                                                color: Colors.white60,
+                                                fontSize: 12,
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -352,9 +361,10 @@ class _HomeState extends State<Home> {
                   child: Text(
                     "Today's Meals",
                     style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold),
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
 
@@ -369,7 +379,8 @@ class _HomeState extends State<Home> {
                   ),
                   child: loadingMeals
                       ? const Center(
-                          child: CircularProgressIndicator(color: Colors.pink))
+                          child: CircularProgressIndicator(color: Colors.pink),
+                        )
                       : todaysMeals.isEmpty
                           ? const Text(
                               "No meals selected for today.",
@@ -393,14 +404,15 @@ class _HomeState extends State<Home> {
                                             Text(
                                               meal['part'] ?? "",
                                               style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight:
-                                                      FontWeight.bold),
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                              ),
                                             ),
                                             Text(
                                               meal['name'] ?? "",
                                               style: const TextStyle(
-                                                  color: Colors.white70),
+                                                color: Colors.white70,
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -418,9 +430,10 @@ class _HomeState extends State<Home> {
                 const Text(
                   "Locker",
                   style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold),
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 10),
 
@@ -440,8 +453,10 @@ class _HomeState extends State<Home> {
                             : lockerNumber != null
                                 ? "Locker Number: $lockerNumber"
                                 : "Locker Number: —",
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 16),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
                       ),
                     ],
                   ),
@@ -453,9 +468,10 @@ class _HomeState extends State<Home> {
                 const Text(
                   "History",
                   style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold),
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 10),
 
@@ -467,14 +483,17 @@ class _HomeState extends State<Home> {
                   ),
                   child: loadingHistory
                       ? const Center(
-                          child: CircularProgressIndicator(color: Colors.pink))
+                          child: CircularProgressIndicator(color: Colors.pink),
+                        )
                       : Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               "Last visit: ${lastVisit != null ? formatVisit(lastVisit!) : "—"}",
                               style: const TextStyle(
-                                  color: Colors.white, fontSize: 14),
+                                color: Colors.white,
+                                fontSize: 14,
+                              ),
                             ),
                             const SizedBox(height: 12),
                             const Divider(color: Colors.white24),
@@ -482,33 +501,40 @@ class _HomeState extends State<Home> {
                             const Text(
                               "Recent visits:",
                               style: TextStyle(
-                                  color: Colors.white70,
-                                  fontWeight: FontWeight.bold),
+                                color: Colors.white70,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             const SizedBox(height: 8),
                             if (recentVisits.isEmpty)
                               const Text(
                                 "No history yet.",
                                 style: TextStyle(
-                                    color: Colors.white60, fontSize: 13),
+                                  color: Colors.white60,
+                                  fontSize: 13,
+                                ),
                               )
                             else
                               Column(
                                 children: recentVisits.map((dt) {
                                   return Padding(
                                     padding: const EdgeInsets.symmetric(
-                                        vertical: 4),
+                                      vertical: 4,
+                                    ),
                                     child: Row(
                                       children: [
-                                        const Icon(Icons.access_time,
-                                            size: 16,
-                                            color: Colors.white60),
+                                        const Icon(
+                                          Icons.access_time,
+                                          size: 16,
+                                          color: Colors.white60,
+                                        ),
                                         const SizedBox(width: 6),
                                         Text(
                                           formatVisit(dt),
                                           style: const TextStyle(
-                                              color: Colors.white60,
-                                              fontSize: 13),
+                                            color: Colors.white60,
+                                            fontSize: 13,
+                                          ),
                                         ),
                                       ],
                                     ),
